@@ -1,38 +1,40 @@
 package com.sistdist.controlador;
 
-import java.io.*;
-import java.net.*;
-import java.util.logging.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
+import java.util.Map;
 
 public class HiloReceptorHumedad extends Thread {
+    private final Socket socket;
     private final int parcelaId;
-    private final BufferedReader br;
+    private final Map<Integer, Double> humedades;
 
-    public HiloReceptorHumedad(Socket ch, int parcelaId) {
+    public HiloReceptorHumedad(Socket socket, int parcelaId) {
+        this.socket = socket;
         this.parcelaId = parcelaId;
-        try {
-            this.br = new BufferedReader(new InputStreamReader(ch.getInputStream()));
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
-        }
+        this.humedades = Controlador.humedades; // uso el mapa compartido
     }
 
     @Override
     public void run() {
-        System.out.println("Receptor humedad iniciado para parcela " + parcelaId);
-        while (true) {
-            try {
-                String entrada = br.readLine();
-                if (entrada == null) break;
-                double h = Double.parseDouble(entrada);
-                Controlador.humedades.put(parcelaId, h);
-                //System.out.printf("Humedad P%d = %.2f%n", parcelaId, h);
-            } catch (IOException ex) {
-                Logger.getLogger(HiloReceptorHumedad.class.getName()).log(Level.SEVERE, null, ex);
-                break;
-            } catch (NumberFormatException nfe) {
-                System.out.println("Valor de humedad inválido");
+        System.out.printf("Receptor humedad iniciado para parcela %d%n", parcelaId);
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                try {
+                    double valor = Double.parseDouble(linea.trim());
+                    // Actualizo el estado compartido
+                    humedades.put(parcelaId, valor);
+                    // *** Logueo explícito de la humedad recibida ***
+                    System.out.printf("[CTRL] Parcela %d | Humedad=%.14f%n", parcelaId, valor);
+                } catch (NumberFormatException e) {
+                    System.out.printf("[CTRL] Parcela %d | dato de humedad inválido: '%s'%n", parcelaId, linea);
+                }
             }
+        } catch (IOException e) {
+            System.out.printf("[CTRL] Parcela %d | conexión de humedad cerrada (%s)%n", parcelaId, e.getMessage());
         }
     }
 }

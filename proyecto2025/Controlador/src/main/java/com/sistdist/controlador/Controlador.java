@@ -49,7 +49,7 @@ public class Controlador {
 
         // Servidor de sensores + electrovalvulas
         try (ServerSocket server = new ServerSocket(20000)) {
-            System.out.println("CONTROLADOR escuchando en 20000...");
+            System.out.println("CONTROLADOR escuchando en el puerto 20000");
             while (true) {
                 Socket s = server.accept();
                 BufferedReader bf = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -105,18 +105,4 @@ public class Controlador {
         }
     }
 
-    // Simulación rápida de T/R/L
-    private static void simularSensoresGlobales() {
-        Random r = new Random();
-        while (true) {
-            try {
-                temp = Math.max(5, Math.min(40, temp + r.nextGaussian()*0.4));
-                rad  = Math.max(0, Math.min(1000, rad + r.nextGaussian()*20));
-                if (r.nextDouble() < 0.05) lluvia = !lluvia;
-
-                //System.out.printf("[GLOBAL] T=%.1fC R=%.0f Lluvia=%s%n", temp, rad, lluvia?"SI":"NO");
-                Thread.sleep(3000);
-            } catch (InterruptedException e) { return; }
-        }
-    }
 }
