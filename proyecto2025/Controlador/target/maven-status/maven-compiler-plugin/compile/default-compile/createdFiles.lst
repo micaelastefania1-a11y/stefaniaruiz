@@ -1,0 +1,7 @@
+com\sistdist\controlador\Controlador.class
+com\sistdist\controlador\HiloReceptorRadiacion.class
+com\sistdist\controlador\Bomba.class
+com\sistdist\controlador\HiloReceptorLluvia.class
+com\sistdist\controlador\HiloReceptorEV.class
+com\sistdist\controlador\HiloReceptorTemperatura.class
+com\sistdist\controlador\HiloReceptorHumedad.class
