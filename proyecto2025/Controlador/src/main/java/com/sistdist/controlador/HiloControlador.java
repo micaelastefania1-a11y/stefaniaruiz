@@ -16,73 +16,82 @@ public class HiloControlador extends Thread {
     }
 
     private double inr(double H, double T, double R) {
-        return w1*(1 - H/100.0) + w2*(T/40.0) + w3*(R/1000.0);
+        return w1 * (1 - H / 100.0) + w2 * (T / 40.0) + w3 * (R / 1000.0);
     }
 
-    private int minutosRiego(double inr) {
+    private int minutosRiegoPorRangos(double inr) {
         if (inr > 0.9) return 10;
-        if (inr > 0.8) return 7;
-        if (inr > 0.7) return 5;
+        if (inr > 0.8 && inr < 0.9) return 7;
+        if (inr > 0.7 && inr < 0.8) return 5;
         return 0;
     }
 
     @Override
-public void run() {
-    while (true) {
-        try {
-            for (int parcelaId : humedades.keySet()) {
-                double H = humedades.get(parcelaId);
-                double T = Controlador.temp;
-                double R = Controlador.rad;
-                boolean L = Controlador.lluvia;
+    public void run() {
+        while (true) {
+            try {
+                for (int parcelaId : humedades.keySet()) {
+                    double H = humedades.get(parcelaId);
 
-                // 1) Calcular INR
-                double val = inr(H, T, R);
-
-                // 2) Calcular minutos de riego según tabla SOLO si no llueve
-                int mins = 0;
-                if (!L) {
-                    if (val > 0.9) {
-                        mins = 10;
-                    } else if (val > 0.8) {
-                        mins = 7;
-                    } else if (val > 0.7) {
-                        mins = 5;
+                    // INR requiere T y R; la lluvia solo afecta la decisión de regar
+                    boolean trReady = Controlador.tempReady && Controlador.radReady;
+                    if (!trReady) {
+                        System.out.printf("[CTRL] Parcela %d | Humedad=%.6f | INR=PENDIENTE %n",
+                                parcelaId, H);
+                        continue;
                     }
-                }
 
-                // 3) Mostrar salida
-                String accion = (mins > 0)
-                        ? "REGAR " + mins + " min"
-                        : (L ? "NO REGAR (LLUVIA)" : "NO REGAR");
-                System.out.printf(
-                    "[CTRL] Parcela %d | INR=%.3f | Lluvia=%s -> %s%n",
-                    parcelaId, val, (L ? "SI" : "NO"), accion
-                );
+                    double T = Controlador.temp;
+                    double R = Controlador.rad;
 
-                // 4) Si corresponde, ejecutar riego
-                if (mins > 0) {
-                    synchronized (Controlador.lockBomba) {
-                        if (!Controlador.fertirrigando) {
-                            PrintWriter bomba = conexionesEV.get(6);
-                            PrintWriter ev = conexionesEV.get(parcelaId);
+                    double val = inr(H, T, R);
 
-                            if (bomba != null) { bomba.println("abrir"); bomba.flush(); }
-                            if (ev != null) {
-                                ev.println("abrir"); ev.flush();
-                                Thread.sleep(mins * 1000L); // simular minutos en segundos
-                                ev.println("cerrar"); ev.flush();
+                    // Si no conocemos la lluvia aún, no regamos por seguridad.
+                    boolean lluviaConocida = Controlador.lluviaReady;
+                    boolean L = Controlador.lluvia;
+
+                    int mins = 0;
+                    if (lluviaConocida && !L) {
+                        mins = minutosRiegoPorRangos(val);
+                    }
+
+                    String lluviaStr = lluviaConocida ? (L ? "SI" : "NO") : "?";
+                    String accion;
+                    if (!lluviaConocida) {
+                        accion = "NO REGAR (lluvia ?)";
+                    } else if (L) {
+                        accion = "NO REGAR (LLUVIA)";
+                    } else {
+                        accion = (mins > 0) ? ("REGAR " + mins + " min") : "NO REGAR";
+                    }
+
+                    System.out.printf(
+                            "[CTRL] Parcela %d | Humedad=%.6f | INR=%.3f | Lluvia=%s -> %s%n",
+                            parcelaId, H, val, lluviaStr, accion
+                    );
+
+                    // Ejecutar riego solo si corresponde
+                    if (mins > 0) {
+                        synchronized (Controlador.lockBomba) {
+                            if (!Controlador.fertirrigando) {
+                                PrintWriter bomba = conexionesEV.get(6);
+                                PrintWriter ev = conexionesEV.get(parcelaId);
+
+                                if (bomba != null) { bomba.println("abrir"); bomba.flush(); }
+                                if (ev != null) {
+                                    ev.println("abrir"); ev.flush();
+                                    Thread.sleep(mins * 1000L); // simular "minutos" en segundos
+                                    ev.println("cerrar"); ev.flush();
+                                }
+                                if (bomba != null) { bomba.println("cerrar"); bomba.flush(); }
                             }
-                            if (bomba != null) { bomba.println("cerrar"); bomba.flush(); }
                         }
                     }
                 }
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                return;
             }
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            return;
         }
     }
 }
-}
-

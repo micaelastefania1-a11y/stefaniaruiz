@@ -1,8 +1,11 @@
 package com.sistdist.controlador;
 
-import java.io.*;
-import java.net.*;
-import java.util.logging.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class HiloReceptorLluvia extends Thread {
     private final int id;
@@ -22,17 +25,24 @@ public class HiloReceptorLluvia extends Thread {
         System.out.println("[CTRL] Receptor de LLUVIA iniciado (id=" + id + ")");
         while (true) {
             try {
-                String entrada = br.readLine();
-                if (entrada == null) break;
+                String linea = br.readLine();
+                if (linea == null) break;
 
-                int v = Integer.parseInt(entrada.trim()); // 0/1
-                Controlador.lluvia = (v > 0);
+                // Soporta "sensorLluvia;1" o simplemente "1"/"0"
+                String[] parts = linea.trim().split(";");
+                String valorStr = parts[parts.length - 1];
+
+                int v = Integer.parseInt(valorStr); // 0 o 1
+                Controlador.lluvia = (v != 0);
+                Controlador.lluviaReady = true;
+
                 System.out.printf("[CTRL] Lluvia(id=%d) -> %s%n", id, Controlador.lluvia ? "SI" : "NO");
-            } catch (IOException ex) {
-                Logger.getLogger(HiloReceptorLluvia.class.getName()).log(Level.SEVERE, null, ex);
-                break;
             } catch (NumberFormatException nfe) {
                 System.out.println("[CTRL] Valor de lluvia inválido: " + nfe.getMessage());
+            } catch (IOException ex) {
+                Logger.getLogger(HiloReceptorLluvia.class.getName())
+                      .log(Level.INFO, "Conexión de lluvia cerrada: {0}", ex.getMessage());
+                break;
             }
         }
     }
