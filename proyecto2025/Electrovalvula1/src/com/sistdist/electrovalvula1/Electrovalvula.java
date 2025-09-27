@@ -12,6 +12,7 @@ public class Electrovalvula {
 
             // Handshake inicial
             out.println("electrovalvula;" + id);
+            System.out.println("[EV1] Handshake enviado: electrovalvula;1");
             out.flush();
             System.out.println("[EV" + id + "] Conectada al controlador.");
 

@@ -1,22 +1,26 @@
 package com.sistdist.sensorradiacion;
 
-import java.io.*;
-import java.net.*;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.Socket;
 
 public class SensorRadiacion {
     public static void main(String[] args) {
-        try (Socket socket = new Socket("127.0.0.1", 20000);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+        try {
+            InetAddress IPServidor = InetAddress.getByName("127.0.0.1");
+            Socket cliente = new Socket(IPServidor, 20000);
+            PrintWriter pw = new PrintWriter(cliente.getOutputStream());
 
-            // Cabecera de identificación
-            out.println("sensorRadiacion;-1"); // -1 ó cualquier id que uses
+            // Handshake inicial
+            pw.println("sensorRadiacion;0"); 
+            pw.flush();
 
-            while (true) {
-                double rad = Math.max(0, Math.min(1000, 500 + (Math.random()-0.5)*200));
-                out.println("sensorRadiacion;" + rad);
-                out.flush();
-                Thread.sleep(5000);
-            }
-        } catch (Exception e) { e.printStackTrace(); }
+            // Hilo que manda datos continuamente
+            HiloSensadoRadiacion hilo = new HiloSensadoRadiacion(cliente, pw);
+            hilo.start();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

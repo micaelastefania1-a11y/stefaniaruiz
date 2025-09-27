@@ -2,26 +2,36 @@ package com.sistdist.controlador;
 
 import java.io.*;
 import java.net.*;
+import java.util.logging.*;
 
 public class HiloReceptorEV extends Thread {
     private final int evId;
     private final BufferedReader br;
 
-    public HiloReceptorEV(Socket socket, int evId) throws IOException {
+    public HiloReceptorEV(Socket s, int evId) {
         this.evId = evId;
-        this.br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        try {
+            this.br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override
     public void run() {
-        try {
-            String entrada;
-            while ((entrada = br.readLine()) != null) {
-                // cada EV responde con algo como "EV1:ok_abierta"
-                System.out.println("[CTRL] Confirmación recibida de EV" + evId + ": " + entrada);
+        System.out.println("[CTRL] Receptor iniciado para EV" + evId);
+        while (true) {
+            try {
+                String entrada = br.readLine();
+                if (entrada == null) break;
+
+                // Mostrar confirmaciones que mande la EV
+                System.out.printf("[CTRL] Confirmación de EV%d -> %s%n", evId, entrada);
+
+            } catch (IOException ex) {
+                Logger.getLogger(HiloReceptorEV.class.getName()).log(Level.SEVERE, null, ex);
+                break;
             }
-        } catch (IOException e) {
-            System.out.println("[CTRL] Conexión cerrada con EV" + evId);
         }
     }
 }

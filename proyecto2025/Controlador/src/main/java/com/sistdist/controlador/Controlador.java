@@ -35,11 +35,11 @@ public class Controlador {
         for (int i = 1; i <= NUM_PARCELAS; i++) {
             new HiloParcela(i, humedades, conexionesEV).start();
         }
-
+        
      
         // Hilo de control (INR y decisiones)
-        HiloControlador hc = new HiloControlador(humedades, conexionesEV);
-        hc.start();
+        //HiloControlador hc = new HiloControlador(humedades, conexionesEV);
+        //hc.start();
 
         // Hilo de sensores globales
         //new Thread(Controlador::simularSensoresGlobales).start();
@@ -68,29 +68,22 @@ public class Controlador {
                          System.out.println("[CTRL] EV " + evId + " conectada.");
                          new HiloReceptorEV(s,evId).start(); // para confirmaciones ok_abierta/ok_cerrada
                          break;
+                         
                     case "sensorHumedad":
                         HiloReceptorHumedad hrh = new HiloReceptorHumedad(s, id);
                         hrh.start();
                         break;
                         
                     case "sensorTemperatura":
-                        temp = Double.parseDouble(parts[1]);
-                        System.out.println("Temperatura actual: " + temp);
-                        s.close();
+                        HiloReceptorTemperatura hrt = new HiloReceptorTemperatura(s, id);
+                        hrt.start();
                         break;
                         
                     case "sensorRadiacion":
-                        rad = Double.parseDouble(parts[1]);
-                        System.out.println("Radiacion actual: " + rad);
-                        s.close();
+                        HiloReceptorRadiacion hrr = new HiloReceptorRadiacion(s, id);
+                        hrr.start();
                         break;
                     
-                    case "fertirriego":
-                        PrintWriter fert = new PrintWriter(s.getOutputStream(), true);
-                        conexionesEV.put(7, fert);
-                        System.out.println("[CTRL] Fertirrigación conectada.");
-                        break;    
-                        
                     case "sensorLluvia":
                         HiloReceptorLluvia hrl = new HiloReceptorLluvia(s, id);
                         hrl.start();
