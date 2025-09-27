@@ -16,8 +16,8 @@ public class Controlador {
     // Estado compartido
     static final Map<Integer, Double> humedades = new ConcurrentHashMap<>(); // por parcela
 
-    static volatile double temp = 22.0, rad = 300.0; 
-    static volatile boolean lluvia = false;
+    static volatile Double temp = null, rad = null; 
+    static volatile Boolean lluvia = null;
     static final int NUM_PARCELAS = 5;
     static final Bomba bomba = new Bomba();
     
@@ -46,6 +46,57 @@ public class Controlador {
 
         // Hilo de fertirrigación
         new Fertirrigacion().start();
+        // Hilo impresor (dentro de Controlador)
+        new Thread(() -> {
+            while (true) {
+                try {
+                    System.out.println("--------------------------------");
+
+                    for (int i = 1; i <= NUM_PARCELAS; i++) {
+                        Double H = humedades.get(i);
+                        if (H == null || temp == null || rad == null || lluvia == null) {
+                            System.out.printf("Parcela %d -> Esperando datos...%n", i);
+                            continue;
+                        }
+
+                        double inr = 0.5 * (1 - H / 100.0)
+                                   + 0.3 * (temp / 40.0)
+                                   + 0.2 * (rad / 1000.0);
+
+                        int mins = 0;
+                        if (!lluvia) {
+                            if (inr > 0.9) mins = 10;
+                            else if (inr > 0.8) mins = 7;
+                            else if (inr > 0.7) mins = 5;
+                        }
+
+                        String riego;
+                        if (lluvia) {
+                            riego = "NO (LLUVIA)";
+                        } else if (mins > 0) {
+                            riego = "SI (" + mins + " min)";
+                        } else {
+                            riego = "NO (INR bajo)";
+                        }
+
+                        System.out.printf(
+                            "Parcela %d -> Humedad = %.2f %% | INR = %.3f | Riego = %s%n",
+                            i, H, inr, riego
+                        );
+                    }
+
+                    System.out.println("\n--- Sensores Globales ---");
+                    System.out.printf("Temperatura = %s%n", temp == null ? "Esperando..." : String.format("%.2f °C", temp));
+                    System.out.printf("Radiacion   = %s%n", rad == null ? "Esperando..." : String.format("%.2f W/m²", rad));
+                    System.out.printf("Lluviendo   = %s%n", lluvia == null ? "Esperando..." : (lluvia ? "SI" : "NO"));
+
+
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+        }).start();
 
         // Servidor de sensores + electrovalvulas
         try (ServerSocket server = new ServerSocket(20000)) {
@@ -99,7 +150,7 @@ public class Controlador {
     }
 
     // Simulación rápida de T/R/L
-    private static void simularSensoresGlobales() {
+   /* private static void simularSensoresGlobales() {
         Random r = new Random();
         while (true) {
             try {
@@ -111,5 +162,5 @@ public class Controlador {
                 Thread.sleep(3000);
             } catch (InterruptedException e) { return; }
         }
-    }
+    }*/
 }

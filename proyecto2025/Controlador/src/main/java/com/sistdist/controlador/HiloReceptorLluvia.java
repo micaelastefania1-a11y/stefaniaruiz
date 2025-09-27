@@ -25,7 +25,8 @@ public class HiloReceptorLluvia extends Thread {
                 String entrada = br.readLine();
                 if (entrada == null) break;
 
-                int v = Integer.parseInt(entrada.trim()); // 0/1
+                int v = Integer.parseInt(entrada.trim()); // 0/1 
+                // 0 -> no llueve 1-> si llueve
                 Controlador.lluvia = (v > 0);
                 System.out.printf("[CTRL] Lluvia(id=%d) -> %s%n", id, Controlador.lluvia ? "SI" : "NO");
             } catch (IOException ex) {
